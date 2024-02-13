@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "artwork-analysis"
+version = "0.1.0"
+description = "Understand an artwork's past, present, and future."
+authors = ["undonepotato <icyseas@outlook.com>"]
+readme = "README.md"
+packages = [{include = "artwork_analysis"}]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+tensorflow = "2.15.0"
+numpy = "1.26.2"
+matplotlib = "3.8.2"
+pandas = "2.1.4"
+keras-tuner = "1.4.6"
+pillow = "10.2.0"
+pyarrow = "^15.0.0"
+tensorboard = "^2.15.2"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.1.1"
+pylint = "^3.0.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
