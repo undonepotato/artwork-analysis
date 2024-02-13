@@ -165,3 +165,7 @@ cython_debug/
 # Comment this line to include data in the repository.
 data/
 
+# Tuning checkpoints/logs
+
+tuning/
+

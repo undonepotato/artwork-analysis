@@ -27,7 +27,9 @@ EXPECTED_SIZE = (300, 300)  # pixels
 
 # Load data
 
-data_df = pd.read_parquet("/home/icyseas_outlook_com/files/maindata/aadata/wikiart/data")
+data_df = pd.read_parquet(
+    "/home/icyseas_outlook_com/files/maindata/aadata/wikiart/data"
+)
 logging.info("Loaded initial data from Parquet")
 
 data_df["image"] = [list(d.values())[0] for d in data_df["image"]]
@@ -173,16 +175,30 @@ global_average_pooling = tf.keras.layers.GlobalAveragePooling2D(
     data_format="channels_last", keepdims=False
 )
 
+
 def create_single_classification_model() -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(300, 300, 3))
     shared_task = efficientnet_v2(inputs)
     shared_task = global_average_pooling(shared_task)
+
     artist_task = tf.keras.layers.Dense(129, activation="softmax")(shared_task)
     genre_task = tf.keras.layers.Dense(11, activation="softmax")(shared_task)
     style_task = tf.keras.layers.Dense(27, activation="softmax")(shared_task)
-    return tf.keras.Model(
+    model = tf.keras.Model(
         inputs=inputs, outputs=[artist_task, genre_task, style_task]
     )
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(
+            learning_rate=0.01
+        ),  # TODO Change learning rate
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        metrics=["accuracy", "loss"],
+        steps_per_execution="auto",  # TODO: CHANGE LATER TO A TUNED VALUE
+    )
+
+    return model
+
 
 def create_three_classification_model(hp) -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(300, 300, 3))
@@ -190,38 +206,170 @@ def create_three_classification_model(hp) -> tf.keras.Model:
     shared_task = global_average_pooling(shared_task)
 
     # Artist
-    artist_task = tf.keras.layers.Dense(hp.Int())
+    artist_task = tf.keras.layers.Dense(
+        hp.Int("artist_units_0", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(shared_task)
+    artist_task = tf.keras.layers.Dense(
+        hp.Int("artist_units_1", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(artist_task)
+    artist_task = tf.keras.layers.Dense(129, activation="softmax")(artist_task)
+
+    # Genre
+
+    genre_task = tf.keras.layers.Dense(
+        hp.Int("genre_units_0", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(shared_task)
+    genre_task = tf.keras.layers.Dense(
+        hp.Int("genre_units_1", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(genre_task)
+    genre_task = tf.keras.layers.Dense(129, activation="softmax")(genre_task)
+
+    # Style
+
+    style_task = tf.keras.layers.Dense(
+        hp.Int("style_units_0", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(shared_task)
+    style_task = tf.keras.layers.Dense(
+        hp.Int("style_units_1", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(style_task)
+    style_task = tf.keras.layers.Dense(129, activation="softmax")(style_task)
+
+    model = tf.keras.Model(
+        inputs=inputs, outputs=[artist_task, genre_task, style_task]
+    )
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(
+            learning_rate=0.01
+        ),  # TODO Change learning rate
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        metrics=["accuracy", "loss"],
+        steps_per_execution="auto",  # TODO: CHANGE LATER TO A TUNED VALUE
+    )
+
+    return model
 
 
-# TODO: Implement multi-layer classifications
+def create_five_classification_model(hp) -> tf.keras.Model:
+    inputs = tf.keras.layers.Input(shape=(300, 300, 3))
+    shared_task = efficientnet_v2(inputs)
+    shared_task = global_average_pooling(shared_task)
+
+    # Artist
+    artist_task = tf.keras.layers.Dense(
+        hp.Int("artist_units_0", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(shared_task)
+    artist_task = tf.keras.layers.Dense(
+        hp.Int("artist_units_1", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(artist_task)
+    artist_task = tf.keras.layers.Dense(
+        hp.Int("artist_units_2", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(artist_task)
+    artist_task = tf.keras.layers.Dense(
+        hp.Int("artist_units_3", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(artist_task)
+    artist_task = tf.keras.layers.Dense(129, activation="softmax")(artist_task)
+
+    # Genre
+
+    genre_task = tf.keras.layers.Dense(
+        hp.Int("genre_units_0", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(shared_task)
+    genre_task = tf.keras.layers.Dense(
+        hp.Int("genre_units_1", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(genre_task)
+    genre_task = tf.keras.layers.Dense(
+        hp.Int("genre_units_2", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(genre_task)
+    genre_task = tf.keras.layers.Dense(
+        hp.Int("genre_units_3", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(genre_task)
+    genre_task = tf.keras.layers.Dense(129, activation="softmax")(genre_task)
+
+    # Style
+
+    style_task = tf.keras.layers.Dense(
+        hp.Int("style_units_0", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(shared_task)
+    style_task = tf.keras.layers.Dense(
+        hp.Int("style_units_1", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(style_task)
+    style_task = tf.keras.layers.Dense(
+        hp.Int("style_units_2", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(style_task)
+    style_task = tf.keras.layers.Dense(
+        hp.Int("style_units_3", min_value=64, max_value=512, step=64),
+        activation="relu",
+    )(style_task)
+    style_task = tf.keras.layers.Dense(129, activation="softmax")(style_task)
+
+    model = tf.keras.Model(
+        inputs=inputs, outputs=[artist_task, genre_task, style_task]
+    )
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(
+            learning_rate=0.01
+        ),  # TODO Change learning rate
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        metrics=["accuracy", "loss"],
+        steps_per_execution="auto",  # TODO: CHANGE LATER TO A TUNED VALUE
+    )
+
+    return model
+
 
 # Create model
 
 with strategy.scope():
-    model = create_model(multi_layered_classifications=False)
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-        metrics=["accuracy", "loss"],
-        steps_per_execution="auto", # TODO: CHANGE LATER TO A TUNED VALUE
+    tuner = kt.Hyperband(
+        create_three_classification_model,
+        objective="val_accuracy",
+        max_epochs=20,
+        factor=3,
+        directory="tuner",
+        project_name="aa-ml",
     )
+    # model = create_model(multi_layered_classifications=False) # Compiled
     # Note: This will use sparse categorical cross-entropy loss for each of the three tasks.
     # They'll be equally balanced in the loss_weights since they weren't provided.
 
-logging.info("Created model, starting training")
+logging.info("Created model, starting tuning")
+
+tuner.search(train, epochs=30, validation_data=val)
+best_hps = tuner.get_best_hyperparameters(num_trials=1)
 
 # Train model
 model.fit(
     train,
-    epochs=30, # With an early stopping callback, probably won't reach this
-    callbacks=[], # TODO: Update later; make sure to add early stopping and Tensorboard at least
-    validation_data=val
+    epochs=30,  # With an early stopping callback, probably won't reach this
+    callbacks=[
+        tf.keras.callbacks.EarlyStopping(
+            monitor="val_loss",
+            min_delta=0.001,
+            patience=7,
+            restore_best_weights=True,
+        )
+    ],  # TODO: Update later; make sure to add early stopping and Tensorboard at least
+    validation_data=val,
 )
 # TODO: Maybe add timestamps?
-# TODO: Look into steps_per_epoch and validation_steps
 # TODO: You literally have one singular day
 # TODO: Also make sure to tune batch sizes!
-# TODO: Okay bye
-
-# TODO: Later when uploading Git LFS use http.postbuffer
-# https://stackoverflow.com/questions/77816301/git-error-rpc-failed-http-400-curl-22-the-requested-url-returned-error-400
