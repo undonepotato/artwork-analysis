@@ -1,0 +1,22 @@
+import tensorflow as tf
+
+print("Tensorflow version " + tf.__version__)
+
+
+@tf.function
+def add_fn(x, y):
+    z = x + y
+    return z
+
+
+cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
+    "aa-ml-tpu"
+)
+tf.config.experimental_connect_to_cluster(cluster_resolver)
+tf.tpu.experimental.initialize_tpu_system(cluster_resolver)
+strategy = tf.distribute.TPUStrategy(cluster_resolver)
+
+x = tf.constant(1.0)
+y = tf.constant(1.0)
+z = strategy.run(add_fn, args=(x, y))
+print(z)

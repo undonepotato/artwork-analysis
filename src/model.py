@@ -7,12 +7,6 @@ import keras_tuner as kt
 import tensorboard
 import logging
 
-resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu="aa-ml-tpu")
-tf.config.experimental_connect_to_cluster(resolver)
-tf.tpu.experimental.initialize_tpu_system(resolver)
-print("All TPU devices: ", tf.config.list_logical_devices("TPU"))
-strategy = tf.distribute.experimental.TPUStrategy(resolver)
-
 # Set up logging
 
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +16,16 @@ logging.info("Using NumPy version %s", np.__version__)
 logging.info("Using TensorFlow version %s", tf.__version__)
 logging.info("Using Pandas version %s", pd.__version__)
 logging.info("Using PIL version %s", PIL.__version__)
+
+print(tf.config.list_physical_devices())
+
+resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
+    tpu="local"
+)
+tf.config.experimental_connect_to_cluster(resolver)
+tf.tpu.experimental.initialize_tpu_system(resolver)
+print("All TPU devices: ", tf.config.list_logical_devices("TPU"))
+strategy = tf.distribute.experimental.TPUStrategy(resolver)
 
 EXPECTED_SIZE = (300, 300)  # pixels
 
@@ -40,7 +44,9 @@ data_df["image"] = [list(d.values())[0] for d in data_df["image"]]
 
 # Decode JPEGs
 
-image_dataset = tf.data.Dataset.from_tensor_slices(data_df["image"]).map(
+image_dataset = tf.data.Dataset.from_tensor_slices(
+    data_df["image"]
+).map(
     lambda x: tf.image.decode_jpeg(x, channels=3),
     num_parallel_calls=tf.data.AUTOTUNE,
 )
@@ -57,7 +63,9 @@ logging.info("Created and shuffled dataset")
 
 # Split into training, validation, and testing
 train = dataset.take(int(0.8 * len(dataset)))
-val = dataset.skip(int(0.8 * len(dataset))).take(int(0.1 * len(dataset)))
+val = dataset.skip(int(0.8 * len(dataset))).take(
+    int(0.1 * len(dataset))
+)
 test = dataset.skip(int(0.9 * len(dataset)))
 
 
@@ -67,9 +75,15 @@ logging.info("Split into training, validation, and testing")
 # Augment images
 @tf.function
 def augment_image(image, seed):
-    image = tf.image.random_brightness(image, max_delta=0.5, seed=seed)
-    image = tf.image.random_contrast(image, lower=0.1, upper=0.9, seed=seed)
-    image = tf.image.random_saturation(image, lower=0.1, upper=0.9, seed=seed)
+    image = tf.image.random_brightness(
+        image, max_delta=0.5, seed=seed
+    )
+    image = tf.image.random_contrast(
+        image, lower=0.1, upper=0.9, seed=seed
+    )
+    image = tf.image.random_saturation(
+        image, lower=0.1, upper=0.9, seed=seed
+    )
     image = tf.image.random_hue(image, max_delta=0.1, seed=seed)
 
     return image
@@ -118,7 +132,9 @@ train = (
             [*labels],
         )
     )
-    .batch(128, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
+    .batch(
+        128, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE
+    )
     .prefetch(tf.data.AUTOTUNE)
 )
 
@@ -141,26 +157,27 @@ test = test.map(
 ).prefetch(tf.data.AUTOTUNE)
 
 logging.info(
-    "Preprocessing complete, train dataset cardinality: %s", train.cardinality()
+    "Preprocessing complete, train dataset cardinality: %s",
+    train.cardinality(),
 )
 logging.info(
-    "Preprocessing complete, val dataset cardinality: %s", val.cardinality()
+    "Preprocessing complete, val dataset cardinality: %s",
+    val.cardinality(),
 )
 logging.info(
-    "Preprocessing complete, test dataset cardinality: %s", test.cardinality()
+    "Preprocessing complete, test dataset cardinality: %s",
+    test.cardinality(),
 )
 
 logging.info(
     "Data cleaning, processing, and augmentation complete; moving to training"
 )
 
-efficientnet_v2 = (
-    tf.keras.applications.EfficientNetV2B0(  # Change to other sizes as needed
-        include_preprocessing=False,
-        weights="imagenet",
-        input_shape=(300, 300, 3),
-        include_top=False,
-    )
+efficientnet_v2 = tf.keras.applications.EfficientNetV2B0(  # Change to other sizes as needed
+    include_preprocessing=False,
+    weights="imagenet",
+    input_shape=(300, 300, 3),
+    include_top=False,
 )
 
 logging.info("Loaded EfficientNetV2B0")
@@ -181,9 +198,15 @@ def create_single_classification_model() -> tf.keras.Model:
     shared_task = efficientnet_v2(inputs)
     shared_task = global_average_pooling(shared_task)
 
-    artist_task = tf.keras.layers.Dense(129, activation="softmax")(shared_task)
-    genre_task = tf.keras.layers.Dense(11, activation="softmax")(shared_task)
-    style_task = tf.keras.layers.Dense(27, activation="softmax")(shared_task)
+    artist_task = tf.keras.layers.Dense(129, activation="softmax")(
+        shared_task
+    )
+    genre_task = tf.keras.layers.Dense(11, activation="softmax")(
+        shared_task
+    )
+    style_task = tf.keras.layers.Dense(27, activation="softmax")(
+        shared_task
+    )
     model = tf.keras.Model(
         inputs=inputs, outputs=[artist_task, genre_task, style_task]
     )
@@ -207,14 +230,20 @@ def create_three_classification_model(hp) -> tf.keras.Model:
 
     # Artist
     artist_task = tf.keras.layers.Dense(
-        hp.Int("artist_units_0", min_value=64, max_value=512, step=64),
+        hp.Int(
+            "artist_units_0", min_value=64, max_value=512, step=64
+        ),
         activation="relu",
     )(shared_task)
     artist_task = tf.keras.layers.Dense(
-        hp.Int("artist_units_1", min_value=64, max_value=512, step=64),
+        hp.Int(
+            "artist_units_1", min_value=64, max_value=512, step=64
+        ),
         activation="relu",
     )(artist_task)
-    artist_task = tf.keras.layers.Dense(129, activation="softmax")(artist_task)
+    artist_task = tf.keras.layers.Dense(129, activation="softmax")(
+        artist_task
+    )
 
     # Genre
 
@@ -226,7 +255,9 @@ def create_three_classification_model(hp) -> tf.keras.Model:
         hp.Int("genre_units_1", min_value=64, max_value=512, step=64),
         activation="relu",
     )(genre_task)
-    genre_task = tf.keras.layers.Dense(129, activation="softmax")(genre_task)
+    genre_task = tf.keras.layers.Dense(129, activation="softmax")(
+        genre_task
+    )
 
     # Style
 
@@ -238,7 +269,9 @@ def create_three_classification_model(hp) -> tf.keras.Model:
         hp.Int("style_units_1", min_value=64, max_value=512, step=64),
         activation="relu",
     )(style_task)
-    style_task = tf.keras.layers.Dense(129, activation="softmax")(style_task)
+    style_task = tf.keras.layers.Dense(129, activation="softmax")(
+        style_task
+    )
 
     model = tf.keras.Model(
         inputs=inputs, outputs=[artist_task, genre_task, style_task]
@@ -263,22 +296,32 @@ def create_five_classification_model(hp) -> tf.keras.Model:
 
     # Artist
     artist_task = tf.keras.layers.Dense(
-        hp.Int("artist_units_0", min_value=64, max_value=512, step=64),
+        hp.Int(
+            "artist_units_0", min_value=64, max_value=512, step=64
+        ),
         activation="relu",
     )(shared_task)
     artist_task = tf.keras.layers.Dense(
-        hp.Int("artist_units_1", min_value=64, max_value=512, step=64),
+        hp.Int(
+            "artist_units_1", min_value=64, max_value=512, step=64
+        ),
         activation="relu",
     )(artist_task)
     artist_task = tf.keras.layers.Dense(
-        hp.Int("artist_units_2", min_value=64, max_value=512, step=64),
+        hp.Int(
+            "artist_units_2", min_value=64, max_value=512, step=64
+        ),
         activation="relu",
     )(artist_task)
     artist_task = tf.keras.layers.Dense(
-        hp.Int("artist_units_3", min_value=64, max_value=512, step=64),
+        hp.Int(
+            "artist_units_3", min_value=64, max_value=512, step=64
+        ),
         activation="relu",
     )(artist_task)
-    artist_task = tf.keras.layers.Dense(129, activation="softmax")(artist_task)
+    artist_task = tf.keras.layers.Dense(129, activation="softmax")(
+        artist_task
+    )
 
     # Genre
 
@@ -298,7 +341,9 @@ def create_five_classification_model(hp) -> tf.keras.Model:
         hp.Int("genre_units_3", min_value=64, max_value=512, step=64),
         activation="relu",
     )(genre_task)
-    genre_task = tf.keras.layers.Dense(129, activation="softmax")(genre_task)
+    genre_task = tf.keras.layers.Dense(129, activation="softmax")(
+        genre_task
+    )
 
     # Style
 
@@ -318,7 +363,9 @@ def create_five_classification_model(hp) -> tf.keras.Model:
         hp.Int("style_units_3", min_value=64, max_value=512, step=64),
         activation="relu",
     )(style_task)
-    style_task = tf.keras.layers.Dense(129, activation="softmax")(style_task)
+    style_task = tf.keras.layers.Dense(129, activation="softmax")(
+        style_task
+    )
 
     model = tf.keras.Model(
         inputs=inputs, outputs=[artist_task, genre_task, style_task]
