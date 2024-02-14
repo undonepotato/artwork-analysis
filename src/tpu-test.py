@@ -10,7 +10,7 @@ def add_fn(x, y):
 
 
 cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-    "aa-ml-tpu"
+    "local"
 )
 tf.config.experimental_connect_to_cluster(cluster_resolver)
 tf.tpu.experimental.initialize_tpu_system(cluster_resolver)

@@ -17,14 +17,12 @@ logging.info("Using TensorFlow version %s", tf.__version__)
 logging.info("Using Pandas version %s", pd.__version__)
 logging.info("Using PIL version %s", PIL.__version__)
 
-print(tf.config.list_physical_devices())
-
 resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
     tpu="local"
 )
 tf.config.experimental_connect_to_cluster(resolver)
 tf.tpu.experimental.initialize_tpu_system(resolver)
-print("All TPU devices: ", tf.config.list_logical_devices("TPU"))
+print("All devices: ", tf.config.list_logical_devices())
 strategy = tf.distribute.experimental.TPUStrategy(resolver)
 
 EXPECTED_SIZE = (300, 300)  # pixels
